@@ -156,7 +156,7 @@ PHP_METHOD(webdav, upload)
 	}
 
 	char *status_code = substring(response, 9, 3);
-	if (strcmp(status_code, "204") == 0) {
+	if (strcmp(status_code, "204") == 0 || strcmp(status_code, "201") == 0) {
 		RETURN_TRUE;
 	}
 	RETURN_STRING(status_code, 1);
