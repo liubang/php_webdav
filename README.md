@@ -9,6 +9,7 @@
 <?php
 $web = new Webdav("webdav.iliubang.cn");
 var_dump($web);
+//本地文件，目标文件名，目标地址
 $res = $web->upload("test.log", "test.log", "/test/");
 var_dump($res);
 
