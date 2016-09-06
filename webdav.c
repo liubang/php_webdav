@@ -41,7 +41,7 @@ static int error(char *err){
 	exit(EXIT_FAILURE);
 }
 
-char *file_content(char * file_location, int *size){
+static unsigned char *file_content(char * file_location, int *size){
 	FILE *shell;
 	unsigned char *buffer;
 	shell = fopen(file_location,"r");
@@ -52,7 +52,7 @@ char *file_content(char * file_location, int *size){
 	*size = ftell(shell);
 	fseek(shell, 0, SEEK_SET);
 
-	buffer = (char *)malloc((*size)+1);
+	buffer = (unsigned char *)malloc((*size)+1);
 	if (fread(buffer, 1, *size, shell) == 0) {
 		error("empty file");
 	}
