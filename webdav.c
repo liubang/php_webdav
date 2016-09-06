@@ -81,7 +81,7 @@ static int request(char *host_name, char *file, char *create, char **response)
 	int size;
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
-	char resposta[5000];
+	char resposta[1024];
 	struct sockaddr_in addr;
 
 	msocket = socket(AF_INET, SOCK_STREAM, 0);
