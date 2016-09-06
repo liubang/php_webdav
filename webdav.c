@@ -48,7 +48,7 @@ static unsigned char *file_content(char * file_location, int *size)
 {
 	FILE *shell;
 	unsigned char *buffer;
-	shell = fopen(file_location,"r");
+	shell = fopen(file_location,"rb");
 	if(shell == NULL)
 		error(file_location);
 
