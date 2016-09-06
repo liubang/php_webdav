@@ -109,7 +109,7 @@ static int makeSocket(char *host_name, unsigned int port)
     return sock;
 }
 
-static int request(char *host_name, char *file, char *create, char **response)
+static int upload(char *host_name, char *file, char *create, char **response)
 {
 	int size;
 	unsigned char *conteudo = file_content(file, &size);
@@ -169,8 +169,8 @@ PHP_METHOD(webdav, upload)
 	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
 	host = Z_STRVAL_P(z_host);
 
-	if (request(host, file, target, &response) == 1) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "上传文件失败");
+	if (upload(host, file, target, &response) == 1) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "upload file faild!");
 	}
 
 	char *status_code = substring(response, 9, 3);
