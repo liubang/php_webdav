@@ -1,7 +1,10 @@
 # php_webdav扩展
 
 一个很简单的php_webdav扩展，仅仅用来研究webdav协议的原理
-只支持较小文件上传操作
+
+- 支持文本以及图片等二进制文件的上传
+
+
 
 #安装
 
@@ -20,8 +23,8 @@ make && sudo make install
 <?php
 $web = new Webdav("webdav.iliubang.cn");
 var_dump($web);
-//本地文件，目标文件名，目标路径
-$res = $web->upload("test.log", "test.log", "/test/");
+//本地文件，目标路径
+$res = $web->upload("1.jpg", "/test/1.jpg",);
 var_dump($res);
 
 ==================
