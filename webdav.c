@@ -32,8 +32,10 @@
 #include <netdb.h>
 #include <string.h>
 #include <getopt.h>
-
+typedef int sockopt_t;
 #include "php_webdav.h"
+#define BUF_SIZE 1024
+
 zend_class_entry *webdav_ce;
 
 static int error(char *err)
@@ -87,7 +89,7 @@ static int makeSocket(char *host_name, unsigned int port)
     }
 
     {
-        int optval = 1;
+    	sockopt_t optval = 1;
         setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     }
 
@@ -112,30 +114,9 @@ static int request(char *host_name, char *file, char *create, char **response)
 	int size;
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
-	char resposta[1024];
-	struct sockaddr_in addr;
-
-	msocket = socket(AF_INET, SOCK_STREAM, 0);
-	if(msocket == -1)
-		error("Fail to create socket");
-
-	struct hostent *host;
-	host = gethostbyname(host_name);
-
-	if(host == NULL)
-		error("Fail to gethostbyname");
-
-	addr.sin_family 	= host->h_addrtype;
-	addr.sin_port		= htons(80);
-	addr.sin_addr		= *((struct in_addr *)host->h_addr);
-
-	memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
-
-	if(connect(msocket,(struct sockaddr*)&addr,sizeof(addr)) == -1)
-		error("Fail to connect");
-		*/
+	char resposta[BUF_SIZE];
 	msocket = makeSocket(host_name, 80);
-	char *put = malloc(1024);
+	char *put = malloc(BUF_SIZE);
 
 	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n", create, size, host_name);
 
@@ -146,7 +127,7 @@ static int request(char *host_name, char *file, char *create, char **response)
 		error("Fail to send content");
 	}
 
-	while((recebidos = recv(msocket,resposta,1024,0))){
+	while((recebidos = recv(msocket,resposta,BUF_SIZE,0))){
 		resposta[recebidos] = '\0';
 		*response = resposta;
 	}
