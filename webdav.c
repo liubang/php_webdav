@@ -37,7 +37,7 @@
 zend_class_entry *webdav_ce;
 
 static int error(char *err){
-	perror(err);
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", err);
 	exit(EXIT_FAILURE);
 }
 
@@ -53,7 +53,9 @@ char *file_content(char * file_location, size_t *size){
 	fseek(shell, 0, SEEK_SET);
 
 	buffer = (char *)malloc(size+1);
-	fread(buffer,1,size,shell);
+	if (fread(buffer,1,size,shell) == 0) {
+		error("empty file");
+	}
 	fclose(shell);
 	return buffer;
 }
@@ -84,13 +86,13 @@ static int request(char *target, char *file, char *create, char *path, char **re
 
 	msocket = socket(AF_INET, SOCK_STREAM, 0);
 	if(msocket == -1)
-		error("Fail to create socket ");
+		error("Fail to create socket");
 
 	struct hostent *host;
 	host = gethostbyname(target);
 
 	if(host == NULL)
-		error("Fail to gethostbyname ");
+		error("Fail to gethostbyname");
 
 	addr.sin_family 	= host->h_addrtype;
 	addr.sin_port		= htons(80);
@@ -101,7 +103,7 @@ static int request(char *target, char *file, char *create, char *path, char **re
 	if(connect(msocket,(struct sockaddr*)&addr,sizeof(addr)) == -1)
 		error("Fail to connect");
 
-	char *put = malloc(1024);
+	char *put = malloc(200 + size);
 
 	sprintf(put,"PUT %s%s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n",path,create,size,target);
 

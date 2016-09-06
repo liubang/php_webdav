@@ -3,13 +3,24 @@
 一个很简单的php_webdav扩展，仅仅用来研究webdav协议的原理
 只支持较小文件上传操作
 
+#安装
+
+
+```bash
+cd php_webdav
+phpize
+./configure --with-php-config={your_php_bin_path}/php-config
+make && sudo make install
+
+```
+
 # 使用
 
 ```php
 <?php
 $web = new Webdav("webdav.iliubang.cn");
 var_dump($web);
-//本地文件，目标文件名，目标地址
+//本地文件，目标文件名，目标路径
 $res = $web->upload("test.log", "test.log", "/test/");
 var_dump($res);
 
