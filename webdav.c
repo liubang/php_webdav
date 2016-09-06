@@ -123,11 +123,11 @@ static int request(char *host_name, char *file, char *create, char **response)
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
 	}
-	if(send(msocket, (void *)conteudo, size, 0) < 0) {
+	if (send(msocket, (void *)conteudo, size, 0) < 0) {
 		error("Fail to send content");
 	}
 
-	while((recebidos = recv(msocket,resposta,BUF_SIZE,0))){
+	while((recebidos = recv(msocket,resposta,BUF_SIZE,0))) {
 		resposta[recebidos] = '\0';
 		*response = resposta;
 	}
