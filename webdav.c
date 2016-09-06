@@ -23,6 +23,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
+
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
@@ -31,9 +32,8 @@
 #include <netdb.h>
 #include <string.h>
 #include <getopt.h>
+
 #include "php_webdav.h"
-
-
 zend_class_entry *webdav_ce;
 
 static int error(char *err)
@@ -69,13 +69,42 @@ static char* substring(char *ch, int pos, int length)
 
 	int i;
 	pch = pch + pos;
-	for (i = 0; i < length; i++)
-	{
+	for (i = 0; i < length; i++) {
 		subch[i] = *(pch++);
 	}
-
 	subch[length] = '\0';
 	return subch;
+}
+
+static int makeSocket(char *host_name, unsigned int port)
+{
+    int sock = socket(PF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr;
+
+    if (sock < 0) {
+        fprintf(stderr, "error: failed to create socket\n");
+        exit(1);
+    }
+
+    {
+        int optval = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    }
+
+    struct hostent *host;
+    host = gethostbyname(host_name);
+    if(host == NULL) {
+    	error("Fail to gethostbyname");
+    }
+
+    addr.sin_family      = AF_INET;
+    addr.sin_port        = htons(port);
+    addr.sin_addr 		 = *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
+    memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
+    if(connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
+    	error("Fail to connect");
+    }
+    return sock;
 }
 
 static int request(char *host_name, char *file, char *create, char **response)
@@ -104,6 +133,8 @@ static int request(char *host_name, char *file, char *create, char **response)
 
 	if(connect(msocket,(struct sockaddr*)&addr,sizeof(addr)) == -1)
 		error("Fail to connect");
+		*/
+	msocket = makeSocket(host_name, 80);
 	char *put = malloc(1024);
 
 	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n", create, size, host_name);
@@ -129,8 +160,9 @@ PHP_METHOD(webdav, __construct)
 {
 	char *host;
 	int host_len;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &host, &host_len) == FAILURE)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &host, &host_len) == FAILURE) {
 		RETURN_FALSE;
+	}
 	zend_update_property_string(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), host TSRMLS_CC);
 }
 
