@@ -36,12 +36,14 @@
 
 zend_class_entry *webdav_ce;
 
-static int error(char *err){
+static int error(char *err)
+{
 	php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", err);
 	exit(EXIT_FAILURE);
 }
 
-char *file_content(char * file_location, int *size){
+static unsigned char *file_content(char * file_location, int *size)
+{
 	FILE *shell;
 	unsigned char *buffer;
 	shell = fopen(file_location,"r");
@@ -52,7 +54,7 @@ char *file_content(char * file_location, int *size){
 	*size = ftell(shell);
 	fseek(shell, 0, SEEK_SET);
 
-	buffer = (char *)malloc((*size)+1);
+	buffer = (unsigned char *)malloc((*size)+1);
 	if (fread(buffer, 1, *size, shell) == 0) {
 		error("empty file");
 	}
@@ -81,7 +83,7 @@ static int request(char *host_name, char *file, char *create, char **response)
 	int size;
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
-	char resposta[5000];
+	char resposta[1024];
 	struct sockaddr_in addr;
 
 	msocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -102,10 +104,9 @@ static int request(char *host_name, char *file, char *create, char **response)
 
 	if(connect(msocket,(struct sockaddr*)&addr,sizeof(addr)) == -1)
 		error("Fail to connect");
-
 	char *put = malloc(1024);
 
-	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nContent-Type:image/png\r\nHost: %s\r\nConnection: close\r\n\r\n",create,size,host_name);
+	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n", create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
@@ -114,7 +115,7 @@ static int request(char *host_name, char *file, char *create, char **response)
 		error("Fail to send content");
 	}
 
-	while((recebidos = recv(msocket,resposta,5000,0))){
+	while((recebidos = recv(msocket,resposta,1024,0))){
 		resposta[recebidos] = '\0';
 		*response = resposta;
 	}
