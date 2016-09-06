@@ -41,20 +41,19 @@ static int error(char *err){
 	exit(EXIT_FAILURE);
 }
 
-char *file_content(char * file_location){
-	int size;
+char *file_content(char * file_location, int *size){
 	FILE *shell;
-	char *buffer;
+	unsigned char *buffer;
 	shell = fopen(file_location,"r");
 	if(shell == NULL)
 		error(file_location);
 
 	fseek(shell, 0, SEEK_END);
-	size = ftell(shell);
+	*size = ftell(shell);
 	fseek(shell, 0, SEEK_SET);
 
-	buffer = (char *)malloc(size+1);
-	if (fread(buffer,1,size,shell) == 0) {
+	buffer = (char *)malloc((*size)+1);
+	if (fread(buffer, 1, *size, shell) == 0) {
 		error("empty file");
 	}
 	fclose(shell);
@@ -77,10 +76,10 @@ static char* substring(char *ch, int pos, int length)
 	return subch;
 }
 
-static int request(char *target, char *file, char *create, char *path, char **response)
+static int request(char *host_name, char *file, char *create, char **response)
 {
-	char *conteudo = file_content(file);
-	int size = strlen(conteudo);
+	int size;
+	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
 	char resposta[5000];
 	struct sockaddr_in addr;
@@ -90,7 +89,7 @@ static int request(char *target, char *file, char *create, char *path, char **re
 		error("Fail to create socket");
 
 	struct hostent *host;
-	host = gethostbyname(target);
+	host = gethostbyname(host_name);
 
 	if(host == NULL)
 		error("Fail to gethostbyname");
@@ -104,12 +103,16 @@ static int request(char *target, char *file, char *create, char *path, char **re
 	if(connect(msocket,(struct sockaddr*)&addr,sizeof(addr)) == -1)
 		error("Fail to connect");
 
-	char *put = malloc(200 + size);
+	char *put = malloc(1024);
 
-	sprintf(put,"PUT %s%s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n%s\r\n\r\n\r\n",path,create,size,target,conteudo);
+	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nContent-Type:image/png\r\nHost: %s\r\nConnection: close\r\n\r\n",create,size,host_name);
 
-	if(send(msocket,put,strlen(put),0) < 0)
-		error("fail to make request");
+	if (send(msocket,put,strlen(put),0) < 0) {
+		error("Fail to send header");
+	}
+	if(send(msocket, (void *)conteudo, size, 0) < 0) {
+		error("Fail to send content");
+	}
 
 	while((recebidos = recv(msocket,resposta,5000,0))){
 		resposta[recebidos] = '\0';
@@ -140,11 +143,10 @@ PHP_METHOD(webdav, upload)
 {
 	char *file;
 	int file_len;
-	char *create;
-	int create_len;
-	char *path;
-	int path_len;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss", &file, &file_len, &create, &create_len, &path, &path_len) ==  FAILURE)
+	char *target;
+	int target_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &file, &file_len, &target, &target_len) ==  FAILURE)
 		RETURN_FALSE;
 
 	char *response;
@@ -153,7 +155,7 @@ PHP_METHOD(webdav, upload)
 	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
 	host = Z_STRVAL_P(z_host);
 
-	if (request(host, file, create, path, &response) == 1) {
+	if (request(host, file, target, &response) == 1) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "上传文件失败");
 	}
 
