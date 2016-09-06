@@ -114,7 +114,7 @@ static int request(char *host_name, char *file, char *create, char **response)
 		error("Fail to send content");
 	}
 
-	while((recebidos = recv(msocket,resposta,5000,0))){
+	while((recebidos = recv(msocket,resposta,1024,0))){
 		resposta[recebidos] = '\0';
 		*response = resposta;
 	}
