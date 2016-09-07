@@ -32,10 +32,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <getopt.h>
-typedef int sockopt_t;
 #include "php_webdav.h"
-
-#define BUF_SIZE 1024
 
 zend_class_entry *webdav_ce;
 

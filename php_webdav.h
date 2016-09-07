@@ -26,6 +26,11 @@ extern zend_module_entry webdav_module_entry;
 #define PROPERTIES_HOST					"_host"
 #define WEBDAV_SOCKET_DESCROPTOR_NAME	"socket"
 
+#define BUF_SIZE 1024
+
+typedef int sockopt_t;
+
+
 #ifdef PHP_WIN32
 #	define PHP_WEBDAV_API __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
