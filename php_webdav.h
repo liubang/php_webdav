@@ -46,5 +46,6 @@ extern zend_module_entry webdav_module_entry;
 
 PHP_METHOD(webdav, __construct);
 PHP_METHOD(webdav, upload);
+PHP_METHOD(webdav, get);
 
 #endif	/* PHP_WEBDAV_H */

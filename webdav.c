@@ -49,8 +49,9 @@ static unsigned char *file_content(char * file_location, int *size)
 	FILE *shell;
 	unsigned char *buffer;
 	shell = fopen(file_location,"rb");
-	if(shell == NULL)
+	if(shell == NULL) {
 		error(file_location);
+	}
 
 	fseek(shell, 0, SEEK_END);
 	*size = ftell(shell);
@@ -99,11 +100,11 @@ static int makeSocket(char *host_name, unsigned int port)
     	error("Fail to gethostbyname");
     }
 
-    addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(port);
-    addr.sin_addr 		 = *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
+    addr.sin_family		= AF_INET;
+    addr.sin_port		= htons(port);
+    addr.sin_addr		= *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
     memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
-    if(connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
+    if (connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
     	error("Fail to connect");
     }
     return sock;
@@ -118,7 +119,7 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	msocket = makeSocket(host_name, 80);
 	char *put = malloc(BUF_SIZE);
 
-	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n", create, size, host_name);
+	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: Keep-Alive\r\n\r\n", create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
@@ -137,6 +138,42 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	return 0;
 }
 
+static int write_file(char * filename, void * buf, int buf_len)
+{
+	FILE *fp = NULL;
+	if (NULL == buf || buf_len <= 0)
+		return -1;
+	fp = fopen(filename, "wb");
+	if (NULL == fp)
+		return -1;
+
+	fwrite(buf, buf_len, 1, fp);
+
+	fclose(fp);
+	return 0;
+}
+
+static int get(char *host_name, char *remote_file, char *target)
+{
+	int msocket, resp_size;
+	msocket = makeSocket(host_name, 80);
+	char *put = malloc(BUF_SIZE);
+	unsigned char * response[BUF_SIZE];
+	sprintf(put,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n", remote_file, host_name);
+
+	if (send(msocket,put,strlen(put),0) < 0) {
+		error("Fail to send header");
+	}
+
+	while((resp_size = recv(msocket,response,BUF_SIZE,0)) > 0) {
+		if (write_file(target, response, resp_size) == -1) {
+			error("写入本地文件失败");
+		}
+	}
+
+	return 0;
+}
+
 PHP_METHOD(webdav, __construct)
 {
 	char *host;
@@ -148,9 +185,10 @@ PHP_METHOD(webdav, __construct)
 }
 
 const zend_function_entry webdav_methods[] = {
-		PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-		PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
-		{NULL, NULL, NULL}
+	PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+	PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(webdav, get, NULL, ZEND_ACC_PUBLIC)
+	{NULL, NULL, NULL}
 };
 
 PHP_METHOD(webdav, upload)
@@ -160,8 +198,9 @@ PHP_METHOD(webdav, upload)
 	char *target;
 	int target_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &file, &file_len, &target, &target_len) ==  FAILURE)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &file, &file_len, &target, &target_len) ==  FAILURE) {
 		RETURN_FALSE;
+	}
 
 	char *response;
 	zval *z_host;
@@ -178,6 +217,25 @@ PHP_METHOD(webdav, upload)
 		RETURN_TRUE;
 	}
 	RETURN_STRING(status_code, 1);
+}
+
+PHP_METHOD(webdav, get)
+{
+	char *remote_file, *target_file;
+	int remote_file_len, target_file_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &remote_file, &remote_file_len, &target_file, &target_file_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	zval *z_host;
+	char *host;
+	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host);
+	if (get(host, remote_file, target_file) != 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "get file faild!");
+	}
+	RETURN_TRUE;
 }
 
 PHP_MINIT_FUNCTION(webdav)
