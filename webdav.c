@@ -173,8 +173,23 @@ static int get(char *host_name, char *remote_file, char *target)
 		error("Fail to send header");
 	}
 
-	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
+	char c = '0';
+	int status, flag = 0;
+	while((status = read(msocket ,&c, 1)) != 0) {
+		if (c == '\r' || c == '\n') {
+			flag++;
+		} else {
+			if (flag > 0) {
+				flag--;
+			}
+		}
 
+		if (flag == 4) {
+			break;
+		}
+
+	}
+	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
 
 		if (write_file(target, response, resp_size) == -1) {
 			error("写入本地文件失败");
