@@ -34,6 +34,7 @@
 #include <getopt.h>
 typedef int sockopt_t;
 #include "php_webdav.h"
+
 #define BUF_SIZE 1024
 
 zend_class_entry *webdav_ce;
@@ -79,7 +80,7 @@ static char* substring(char *ch, int pos, int length)
 	return subch;
 }
 
-static int makeSocket(char *host_name, unsigned int port)
+static int make_socket(char *host_name, unsigned int port)
 {
     int sock = socket(PF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
@@ -116,10 +117,15 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
 	char resposta[BUF_SIZE];
-	msocket = makeSocket(host_name, 80);
+	msocket = make_socket(host_name, 80);
 	char *put = malloc(BUF_SIZE);
 
-	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: Keep-Alive\r\n\r\n", create, size, host_name);
+	sprintf(put,								\
+			"PUT %s HTTP/1.1\r\n"				\
+			"Content-Length: %d\r\n"			\
+			"Host: %s\r\n"						\
+			"Connection: close\r\n\r\n"			\
+			, create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
@@ -143,7 +149,7 @@ static int write_file(char * filename, void * buf, int buf_len)
 	FILE *fp = NULL;
 	if (NULL == buf || buf_len <= 0)
 		return -1;
-	fp = fopen(filename, "wb");
+	fp = fopen(filename, "ab");//append binary file
 	if (NULL == fp)
 		return -1;
 
@@ -156,16 +162,23 @@ static int write_file(char * filename, void * buf, int buf_len)
 static int get(char *host_name, char *remote_file, char *target)
 {
 	int msocket, resp_size;
-	msocket = makeSocket(host_name, 80);
-	char *put = malloc(BUF_SIZE);
-	unsigned char * response[BUF_SIZE];
-	sprintf(put,"GET %s HTTP/1.1\r\nHost: %s\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n", remote_file, host_name);
+	msocket = make_socket(host_name, 80);
+	char *get = malloc(BUF_SIZE);
+	unsigned char response[BUF_SIZE];
+	sprintf(get,									\
+			"GET %s HTTP/1.1\r\n" 					\
+			"Host: %s\r\n" 							\
+			"Accept-Encoding: gzip, deflate\r\n" 	\
+			"Connection: close\r\n\r\n"				\
+			, remote_file, host_name);
 
-	if (send(msocket,put,strlen(put),0) < 0) {
+	if (send(msocket,get,strlen(get),0) < 0) {
 		error("Fail to send header");
 	}
 
-	while((resp_size = recv(msocket,response,BUF_SIZE,0)) > 0) {
+	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
+
+
 		if (write_file(target, response, resp_size) == -1) {
 			error("写入本地文件失败");
 		}
