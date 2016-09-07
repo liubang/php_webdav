@@ -32,9 +32,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <getopt.h>
-typedef int sockopt_t;
 #include "php_webdav.h"
-#define BUF_SIZE 1024
 
 zend_class_entry *webdav_ce;
 
@@ -49,8 +47,9 @@ static unsigned char *file_content(char * file_location, int *size)
 	FILE *shell;
 	unsigned char *buffer;
 	shell = fopen(file_location,"rb");
-	if(shell == NULL)
+	if(shell == NULL) {
 		error(file_location);
+	}
 
 	fseek(shell, 0, SEEK_END);
 	*size = ftell(shell);
@@ -78,7 +77,7 @@ static char* substring(char *ch, int pos, int length)
 	return subch;
 }
 
-static int makeSocket(char *host_name, unsigned int port)
+static int make_socket(char *host_name, unsigned int port)
 {
     int sock = socket(PF_INET, SOCK_STREAM, 0);
     struct sockaddr_in addr;
@@ -99,11 +98,11 @@ static int makeSocket(char *host_name, unsigned int port)
     	error("Fail to gethostbyname");
     }
 
-    addr.sin_family      = AF_INET;
-    addr.sin_port        = htons(port);
-    addr.sin_addr 		 = *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
+    addr.sin_family		= AF_INET;
+    addr.sin_port		= htons(port);
+    addr.sin_addr		= *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
     memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
-    if(connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
+    if (connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
     	error("Fail to connect");
     }
     return sock;
@@ -115,10 +114,15 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
 	char resposta[BUF_SIZE];
-	msocket = makeSocket(host_name, 80);
+	msocket = make_socket(host_name, 80);
 	char *put = malloc(BUF_SIZE);
 
-	sprintf(put,"PUT %s HTTP/1.1\r\nContent-Length: %d\r\nHost: %s\r\nConnection: close\r\n\r\n", create, size, host_name);
+	sprintf(put,								\
+			"PUT %s HTTP/1.1\r\n"				\
+			"Content-Length: %d\r\n"			\
+			"Host: %s\r\n"						\
+			"Connection: close\r\n\r\n"			\
+			, create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
@@ -137,6 +141,64 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	return 0;
 }
 
+static int write_file(char * filename, void * buf, int buf_len)
+{
+	FILE *fp = NULL;
+	if (NULL == buf || buf_len <= 0)
+		return -1;
+	fp = fopen(filename, "ab");//append binary file
+	if (NULL == fp)
+		return -1;
+
+	fwrite(buf, buf_len, 1, fp);
+
+	fclose(fp);
+	return 0;
+}
+
+static int get(char *host_name, char *remote_file, char *target)
+{
+	int msocket, resp_size;
+	msocket = make_socket(host_name, 80);
+	char *get = malloc(BUF_SIZE);
+	unsigned char response[BUF_SIZE];
+	sprintf(get,									\
+			"GET %s HTTP/1.1\r\n" 					\
+			"Host: %s\r\n" 							\
+			"Accept-Encoding: gzip, deflate\r\n" 	\
+			"Connection: close\r\n\r\n"				\
+			, remote_file, host_name);
+
+	if (send(msocket,get,strlen(get),0) < 0) {
+		error("Fail to send header");
+	}
+
+	char c = '0';
+	int status, flag = 0;
+	while((status = read(msocket ,&c, 1)) != 0) {
+		if (c == '\r' || c == '\n') {
+			flag++;
+		} else {
+			if (flag > 0) {
+				flag--;
+			}
+		}
+
+		if (flag == 4) {
+			break;
+		}
+
+	}
+	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
+
+		if (write_file(target, response, resp_size) == -1) {
+			error("写入本地文件失败");
+		}
+	}
+
+	return 0;
+}
+
 PHP_METHOD(webdav, __construct)
 {
 	char *host;
@@ -148,9 +210,10 @@ PHP_METHOD(webdav, __construct)
 }
 
 const zend_function_entry webdav_methods[] = {
-		PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-		PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
-		{NULL, NULL, NULL}
+	PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+	PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(webdav, get, NULL, ZEND_ACC_PUBLIC)
+	{NULL, NULL, NULL}
 };
 
 PHP_METHOD(webdav, upload)
@@ -160,8 +223,9 @@ PHP_METHOD(webdav, upload)
 	char *target;
 	int target_len;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &file, &file_len, &target, &target_len) ==  FAILURE)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &file, &file_len, &target, &target_len) ==  FAILURE) {
 		RETURN_FALSE;
+	}
 
 	char *response;
 	zval *z_host;
@@ -178,6 +242,25 @@ PHP_METHOD(webdav, upload)
 		RETURN_TRUE;
 	}
 	RETURN_STRING(status_code, 1);
+}
+
+PHP_METHOD(webdav, get)
+{
+	char *remote_file, *target_file;
+	int remote_file_len, target_file_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &remote_file, &remote_file_len, &target_file, &target_file_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	zval *z_host;
+	char *host;
+	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host);
+	if (get(host, remote_file, target_file) != 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "get file faild!");
+	}
+	RETURN_TRUE;
 }
 
 PHP_MINIT_FUNCTION(webdav)
