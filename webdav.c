@@ -94,33 +94,33 @@ static int write_file(char * filename, void * buf, int buf_len)
 
 static int make_socket(char *host_name, unsigned int port)
 {
-    int sock = socket(PF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in addr;
+	int sock = socket(PF_INET, SOCK_STREAM, 0);
+	struct sockaddr_in addr;
 
-    if (sock < 0) {
-        fprintf(stderr, "error: failed to create socket\n");
-        exit(1);
-    }
+	if (sock < 0) {
+		fprintf(stderr, "error: failed to create socket\n");
+		exit(1);
+	}
 
-    {
-    	sockopt_t optval = 1;
-        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-    }
+	{
+		sockopt_t optval = 1;
+		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+	}
 
-    struct hostent *host;
-    host = gethostbyname(host_name);
-    if(host == NULL) {
-    	error("Fail to gethostbyname");
-    }
+	struct hostent *host;
+	host = gethostbyname(host_name);
+	if(host == NULL) {
+		error("Fail to gethostbyname");
+	}
 
-    addr.sin_family		= AF_INET;
-    addr.sin_port		= htons(port);
-    addr.sin_addr		= *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
-    memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
-    if (connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
-    	error("Fail to connect");
-    }
-    return sock;
+	addr.sin_family		= AF_INET;
+	addr.sin_port		= htons(port);
+	addr.sin_addr		= *((struct in_addr *)host->h_addr); //htonl(INADDR_ANY);
+	memset(&addr.sin_zero,0,sizeof(addr.sin_zero));
+	if (connect(sock,(struct sockaddr*)&addr,sizeof(addr)) == -1) {
+		error("Fail to connect");
+	}
+	return sock;
 }
 
 static int upload(char *host_name, char *file, char *create, char **response)
