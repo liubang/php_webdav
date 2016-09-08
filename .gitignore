@@ -1,4 +1,6 @@
 .settings
+.project
+.cproject
 .deps
 *.lo
 *.la
