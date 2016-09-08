@@ -77,6 +77,21 @@ static char* substring(char *ch, int pos, int length)
 	return subch;
 }
 
+static int write_file(char * filename, void * buf, int buf_len)
+{
+	FILE *fp = NULL;
+	if (NULL == buf || buf_len <= 0)
+		return -1;
+	fp = fopen(filename, "ab");//append binary file
+	if (NULL == fp)
+		return -1;
+
+	fwrite(buf, buf_len, 1, fp);
+
+	fclose(fp);
+	return 0;
+}
+
 static int make_socket(char *host_name, unsigned int port)
 {
     int sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -113,8 +128,8 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	int size;
 	unsigned char *conteudo = file_content(file, &size);
 	int msocket,recebidos;
-	char resposta[BUF_SIZE];
-	msocket = make_socket(host_name, 80);
+	char buf[BUF_SIZE];
+	msocket = make_socket(host_name, SOCK_PORT);
 	char *put = malloc(BUF_SIZE);
 
 	sprintf(put,								\
@@ -131,9 +146,11 @@ static int upload(char *host_name, char *file, char *create, char **response)
 		error("Fail to send content");
 	}
 
-	while((recebidos = recv(msocket,resposta,BUF_SIZE,0))) {
-		resposta[recebidos] = '\0';
-		*response = resposta;
+	if ((recebidos = recv(msocket, buf, sizeof(buf),0)) > 0) {
+		buf[recebidos] = '\0';
+		*response = buf;
+	} else {
+		error("put file faild");
 	}
 
 	close(msocket);
@@ -141,25 +158,38 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	return 0;
 }
 
-static int write_file(char * filename, void * buf, int buf_len)
+static int delete(char *host_name, char *remote_file, char **response)
 {
-	FILE *fp = NULL;
-	if (NULL == buf || buf_len <= 0)
-		return -1;
-	fp = fopen(filename, "ab");//append binary file
-	if (NULL == fp)
-		return -1;
+	int sock = make_socket(host_name, SOCK_PORT);
+	char buf[BUF_SIZE];
+	char *delete = malloc(BUF_SIZE);
+	sprintf(delete,								\
+			"DELETE %s HTTP/1.1\r\n"			\
+			"Host: %s\r\n"						\
+			"Connection: close\r\n\r\n"			\
+			, remote_file, host_name);
+	if (send(sock, delete, strlen(delete),0) < 0) {
+		error("Fail to send header");
+	}
 
-	fwrite(buf, buf_len, 1, fp);
+	int recebidos;
+	if ((recebidos = recv(sock, buf, sizeof(buf),0)) > 0) {
+		buf[recebidos] = '\0';
+		*response = buf;
+	} else {
+		error("delete file faild");
+	}
 
-	fclose(fp);
+	close(sock);
+	free(delete);
 	return 0;
 }
+
 
 static int get(char *host_name, char *remote_file, char *target)
 {
 	int msocket, resp_size;
-	msocket = make_socket(host_name, 80);
+	msocket = make_socket(host_name, SOCK_PORT);
 	char *get = malloc(BUF_SIZE);
 	unsigned char response[BUF_SIZE];
 	sprintf(get,									\
@@ -190,14 +220,15 @@ static int get(char *host_name, char *remote_file, char *target)
 
 	}
 	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
-
 		if (write_file(target, response, resp_size) == -1) {
-			error("写入本地文件失败");
+			error("write target file error!");
 		}
 	}
-
+	free(get);
+	close(msocket);
 	return 0;
 }
+
 
 PHP_METHOD(webdav, __construct)
 {
@@ -213,6 +244,7 @@ const zend_function_entry webdav_methods[] = {
 	PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
 	PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(webdav, get, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(webdav, delete, NULL, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -227,13 +259,12 @@ PHP_METHOD(webdav, upload)
 		RETURN_FALSE;
 	}
 
-	char *response;
-	zval *z_host;
-	char *host;
-	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
-	host = Z_STRVAL_P(z_host);
+	char *response, *host;
+	zval *z_host_ptr;
+	z_host_ptr = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host_ptr);
 
-	if (upload(host, file, target, &response) == 1) {
+	if (upload(host, file, target, &response) != 0) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "upload file faild!");
 	}
 
@@ -242,6 +273,30 @@ PHP_METHOD(webdav, upload)
 		RETURN_TRUE;
 	}
 	RETURN_STRING(status_code, 1);
+}
+
+PHP_METHOD(webdav, delete)
+{
+	char *remote_file;
+	int remote_file_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &remote_file, &remote_file_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+	char *response, *host;
+	zval *z_host_ptr;
+	z_host_ptr = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host_ptr);
+
+	if (delete(host, remote_file, &response) != 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "delete file faild!");
+	}
+
+	char *status_code = substring(response, 9, 3);
+	if (strcmp(status_code, "200") == 0 || strcmp(status_code, "201") == 0 || strcmp(status_code, "204") == 0) {
+		RETURN_TRUE;
+	}
+	RETURN_STRING(response, 1);
 }
 
 PHP_METHOD(webdav, get)
@@ -253,10 +308,10 @@ PHP_METHOD(webdav, get)
 		RETURN_FALSE;
 	}
 
-	zval *z_host;
+	zval *z_host_ptr;
 	char *host;
-	z_host = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
-	host = Z_STRVAL_P(z_host);
+	z_host_ptr = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host_ptr);
 	if (get(host, remote_file, target_file) != 0) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "get file faild!");
 	}
