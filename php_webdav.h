@@ -26,7 +26,8 @@ extern zend_module_entry webdav_module_entry;
 #define PROPERTIES_HOST					"_host"
 #define WEBDAV_SOCKET_DESCROPTOR_NAME	"socket"
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 	20480
+#define SOCK_PORT	80
 
 typedef int sockopt_t;
 
@@ -52,5 +53,6 @@ typedef int sockopt_t;
 PHP_METHOD(webdav, __construct);
 PHP_METHOD(webdav, upload);
 PHP_METHOD(webdav, get);
+PHP_METHOD(webdav, delete);
 
 #endif	/* PHP_WEBDAV_H */

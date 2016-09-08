@@ -4,6 +4,7 @@
 
 - 支持文件的上传
 - 支持文件的下载
+- 支持文件的删除
 
 
 
@@ -15,6 +16,7 @@ cd php_webdav
 phpize
 ./configure --with-php-config={your_php_bin_path}/php-config
 make && sudo make install
+echo 'extension=webdav.so' >> {your_php_ini_path}/php.ini
 
 ```
 
@@ -30,6 +32,9 @@ var_dump($res);
 //远程文件，存放的本地路径
 $res = $webdav->get("/test/4.jpg", "/home/liubang/workspace/c/php_webdav/4.jpg");
 var_dump($res);
+//远程文件
+$res = $webdav->delete('/test/1.jpg');
+var_dump($res);
 
 
 ==================
@@ -38,6 +43,7 @@ object(Webdav)#1 (1) {
   ["_host":protected]=>
   string(18) "webdav.iliubang.cn"
 }
+bool(true)
 bool(true)
 bool(true)
 
