@@ -25,7 +25,6 @@ extern zend_module_entry webdav_module_entry;
 #define PHP_WEBDAV_VERSION 				"0.1.0"
 #define PHP_WEBDAV_AUTHOR				"liubang <it.liubang@gmail.com>"
 #define PROPERTIES_HOST					"_host"
-#define WEBDAV_SOCKET_DESCROPTOR_NAME	"socket"
 
 #define BUF_SIZE 	20480
 #define SOCK_PORT	80
