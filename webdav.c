@@ -132,12 +132,12 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	msocket = make_socket(host_name, SOCK_PORT);
 	char *put = malloc(BUF_SIZE);
 
-	sprintf(put,								\
-			"PUT %s HTTP/1.1\r\n"				\
-			"Content-Length: %d\r\n"			\
-			"Host: %s\r\n"						\
-			"Connection: close\r\n\r\n"			\
-			, create, size, host_name);
+	sprintf(put,					\
+		"PUT %s HTTP/1.1\r\n"			\
+		"Content-Length: %d\r\n"		\
+		"Host: %s\r\n"				\
+		"Connection: close\r\n\r\n"		\
+		, create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
