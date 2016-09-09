@@ -163,11 +163,11 @@ static int delete(char *host_name, char *remote_file, char **response)
 	int sock = make_socket(host_name, SOCK_PORT);
 	char buf[BUF_SIZE];
 	char *delete = malloc(BUF_SIZE);
-	sprintf(delete,								\
-			"DELETE %s HTTP/1.1\r\n"			\
-			"Host: %s\r\n"						\
-			"Connection: close\r\n\r\n"			\
-			, remote_file, host_name);
+	sprintf(delete,						\
+		"DELETE %s HTTP/1.1\r\n"			\
+		"Host: %s\r\n"					\
+		"Connection: close\r\n\r\n"			\
+		, remote_file, host_name);
 	if (send(sock, delete, strlen(delete),0) < 0) {
 		error("Fail to send header");
 	}
@@ -192,12 +192,12 @@ static int get(char *host_name, char *remote_file, char *target)
 	msocket = make_socket(host_name, SOCK_PORT);
 	char *get = malloc(BUF_SIZE);
 	unsigned char response[BUF_SIZE];
-	sprintf(get,									\
-			"GET %s HTTP/1.1\r\n" 					\
-			"Host: %s\r\n" 							\
-			"Accept-Encoding: gzip, deflate\r\n" 	\
-			"Connection: close\r\n\r\n"				\
-			, remote_file, host_name);
+	sprintf(get,					\
+		"GET %s HTTP/1.1\r\n" 			\
+		"Host: %s\r\n" 				\
+		"Accept-Encoding: gzip, deflate\r\n" 	\
+		"Connection: close\r\n\r\n"		\
+		, remote_file, host_name);
 
 	if (send(msocket,get,strlen(get),0) < 0) {
 		error("Fail to send header");
