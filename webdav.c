@@ -376,12 +376,46 @@ PHP_METHOD(webdav, post)
 	}
 	if (NULL != z_post_data) {
 		switch (Z_TYPE_P(z_post_data)) {
-		case IS_STRING:
-			post_data =	Z_STRVAL_P(z_post_data);
-			break;
-		case IS_ARRAY:
-			post_data = "";
-			break;
+			case IS_STRING:
+				post_data =	Z_STRVAL_P(z_post_data);
+				break;
+			case IS_ARRAY:
+			{
+				zval            **current;
+				HashTable        *postfields;
+				postfields = HASH_OF(z_post_data);
+				if (!postfields) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Couldn't get HashTable in CURLOPT_POSTFIELDS");
+					RETURN_FALSE;
+				}
+				uint post_data_size;
+				char postval[BUF_SIZE] = "";
+				for (zend_hash_internal_pointer_reset(postfields); zend_hash_get_current_data(postfields, (void **) &current) == SUCCESS; zend_hash_move_forward(postfields)) {
+					char *string_key = NULL;
+					uint string_key_len;
+					ulong num_key;
+					int numeric_key;
+					zend_hash_get_current_key_ex(postfields, &string_key, &string_key_len, &num_key, 0, NULL);
+					if (!string_key) {
+						spprintf(&string_key, 0, "%ld", num_key);
+						string_key_len = strlen(string_key) + 1;
+					} else {
+						numeric_key = 0;
+					}
+					post_data_size += string_key_len;
+					SEPARATE_ZVAL(current);
+					convert_to_string_ex(current);
+					char *val = Z_STRVAL_PP(current);
+					strcat(postval, string_key);
+					strcat(postval, "=");
+					strcat(postval, val);
+					strcat(postval, "&");
+					post_data_size += (2 + strlen(val));
+				}
+				postval[post_data_size - 1] = '\0';
+				post_data = postval;
+				break;
+			}
 		}
 	}
 

@@ -2,7 +2,8 @@
 
 $webdav = new Webdav("linger.iliubang.cn");
 
-$res = $webdav->post('/', 'name=liubang&age=23');
+$arr = array('name' => 'liubang', 'age' => 23);
+$res = $webdav->post('/', $arr);
 
 var_dump($res);
 
