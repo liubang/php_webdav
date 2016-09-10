@@ -2,9 +2,7 @@
 
 一个很简单的php_webdav扩展，仅仅用来研究webdav协议的原理
 
-- 支持文件的上传
-- 支持文件的下载
-- 支持文件的删除
+支持PUT, GET, DELETE, POST请求
 
 
 
@@ -36,6 +34,14 @@ var_dump($res);
 $res = $webdav->delete('/test/1.jpg');
 var_dump($res);
 
+$webdav = new Webdav("linger.iliubang.cn");
+
+$arr = array('name' => 'liubang', 'age' => 23, 'gender' => 'nan');
+// $res = $webdav->post('/', "name=liubang&age=sadgad");
+$res = $webdav->post('/', $arr);
+
+echo $res;
+
 
 ==================
 liubang@shop-dev:~ $ php test.php
@@ -46,5 +52,5 @@ object(Webdav)#1 (1) {
 bool(true)
 bool(true)
 bool(true)
-
+{"name":"liubang","age":"23","gender":"nan"}
 ```
