@@ -2,12 +2,12 @@
 
 $webdav = new Webdav("linger.iliubang.cn");
 
-$arr = array('name' => 'liubang', 'age' => 23);
+$arr = array('name' => 'liubang', 'age' => 23, 'gender' => 'nan');
+// $res = $webdav->post('/', "name=liubang&age=sadgad");
 $res = $webdav->post('/', $arr);
 
-var_dump($res);
+echo $res;
 
-//var_dump($webdav);
 
 //$res = $webdav->upload("Makefile", "/test/Makefile");
 //var_dump($res);

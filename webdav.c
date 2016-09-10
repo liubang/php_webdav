@@ -34,6 +34,8 @@
 #include <getopt.h>
 #include "php_webdav.h"
 
+#define MAXSUB  200
+
 zend_class_entry *webdav_ce;
 
 static int error(char *err)
@@ -191,16 +193,12 @@ static int post(char *host_name, char *path, char *post_data, char **resp)
 	int sock = make_socket(host_name, SOCK_PORT);
 	char response[BUF_SIZE];
 	char *post = malloc(BUF_SIZE);
-	sprintf(post,
-			"POST %s HTTP/1.1\r\n"									\
-			"Host: %s\r\n"											\
-			"Content-Type: application/x-www-form-urlencoded\r\n"	\
-			"Content-Length: %zd\r\n"								\
-			"Connection:close\r\n\r\n"								\
-			"%s"													\
-	,path, host_name, strlen(post_data), post_data);
-
-	php_printf("%s\n", post);
+	snprintf(post, MAXSUB,
+			 "POST %s HTTP/1.0\r\n"
+			 "Host: %s\r\n"
+			 "Content-type: application/x-www-form-urlencoded\r\n"
+			 "Content-length: %d\r\n\r\n"
+			 "%s", path, host_name, strlen(post_data), post_data);
 
 	if (send(sock, post, strlen(post), 0) < 0) {
 		error("Fail to make post request");
@@ -388,7 +386,8 @@ PHP_METHOD(webdav, post)
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Couldn't get HashTable in CURLOPT_POSTFIELDS");
 					RETURN_FALSE;
 				}
-				uint post_data_size;
+
+				int post_data_size = 0;
 				char postval[BUF_SIZE] = "";
 				for (zend_hash_internal_pointer_reset(postfields); zend_hash_get_current_data(postfields, (void **) &current) == SUCCESS; zend_hash_move_forward(postfields)) {
 					char *string_key = NULL;
@@ -402,7 +401,6 @@ PHP_METHOD(webdav, post)
 					} else {
 						numeric_key = 0;
 					}
-					post_data_size += string_key_len;
 					SEPARATE_ZVAL(current);
 					convert_to_string_ex(current);
 					char *val = Z_STRVAL_PP(current);
@@ -410,10 +408,10 @@ PHP_METHOD(webdav, post)
 					strcat(postval, "=");
 					strcat(postval, val);
 					strcat(postval, "&");
-					post_data_size += (2 + strlen(val));
 				}
-				postval[post_data_size - 1] = '\0';
+				post_data_size = strlen(postval) - 1;
 				post_data = postval;
+				post_data[post_data_size] = '\0';
 				break;
 			}
 		}
