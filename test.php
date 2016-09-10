@@ -1,8 +1,13 @@
 <?php
 
-$webdav = new Webdav("webdav.iliubang.cn");
+$webdav = new Webdav("linger.iliubang.cn");
 
-//var_dump($webdav);
+$arr = array('name' => 'liubang', 'age' => 23, 'gender' => 'nan');
+// $res = $webdav->post('/', "name=liubang&age=sadgad");
+$res = $webdav->post('/', $arr);
+
+echo $res;
+
 
 //$res = $webdav->upload("Makefile", "/test/Makefile");
 //var_dump($res);
@@ -12,6 +17,6 @@ $webdav = new Webdav("webdav.iliubang.cn");
 
 //var_dump($res);
 
-$res = $webdav->delete('/test/Makefil');
+// $res = $webdav->delete('/test/Makefil');
 //var_dump($res);
 

@@ -53,6 +53,7 @@ typedef int sockopt_t;
 PHP_METHOD(webdav, __construct);
 PHP_METHOD(webdav, upload);
 PHP_METHOD(webdav, get);
+PHP_METHOD(webdav, post);
 PHP_METHOD(webdav, delete);
 
 #endif	/* PHP_WEBDAV_H */
