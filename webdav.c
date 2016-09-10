@@ -186,6 +186,51 @@ static int delete(char *host_name, char *remote_file, char **response)
 }
 
 
+static int post(char *host_name, char *path, char *post_data, char **resp)
+{
+	int sock = make_socket(host_name, SOCK_PORT);
+	char response[BUF_SIZE];
+	char *post = malloc(BUF_SIZE);
+	sprintf(post,
+			"POST %s HTTP/1.1\r\n"									\
+			"Host: %s\r\n"											\
+			"Content-Type: application/x-www-form-urlencoded\r\n"	\
+			"Content-Length: %zd\r\n"								\
+			"Connection:close\r\n\r\n"								\
+			"%s"													\
+	,path, host_name, strlen(post_data), post_data);
+
+	php_printf("%s\n", post);
+
+	if (send(sock, post, strlen(post), 0) < 0) {
+		error("Fail to make post request");
+	}
+	char c = '0';
+	int status, flag = 0, resp_size;
+	while((status = read(sock ,&c, 1)) != 0) {
+		if (c == '\r' || c == '\n') {
+			flag++;
+		} else {
+			if (flag > 0) {
+				flag--;
+			}
+		}
+
+		if (flag == 4) {
+			break;
+		}
+
+	}
+
+	while((resp_size = read(sock,response, BUF_SIZE)) != 0) {
+		response[resp_size] = '\0';
+	}
+	*resp = response;
+	free(post);
+	close(sock);
+	return 0;
+}
+
 static int get(char *host_name, char *remote_file, char *target)
 {
 	int msocket, resp_size;
@@ -244,6 +289,7 @@ const zend_function_entry webdav_methods[] = {
 	PHP_ME(webdav, __construct, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
 	PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(webdav, get, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(webdav, post, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(webdav, delete, NULL, ZEND_ACC_PUBLIC)
 	{
 		NULL, NULL, NULL
@@ -298,7 +344,7 @@ PHP_METHOD(webdav, delete)
 	if (strcmp(status_code, "200") == 0 || strcmp(status_code, "201") == 0 || strcmp(status_code, "204") == 0) {
 		RETURN_TRUE;
 	}
-	RETURN_STRING(response, 1);
+	RETURN_LONG(atoi(response));
 }
 
 PHP_METHOD(webdav, get)
@@ -318,6 +364,35 @@ PHP_METHOD(webdav, get)
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "get file faild!");
 	}
 	RETURN_TRUE;
+}
+
+PHP_METHOD(webdav, post)
+{
+	char *uri, *post_data;
+	int uri_length;
+	zval *z_post_data;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &uri, &uri_length, &z_post_data) == FAILURE) {
+		RETURN_FALSE;
+	}
+	if (NULL != z_post_data) {
+		switch (Z_TYPE_P(z_post_data)) {
+		case IS_STRING:
+			post_data =	Z_STRVAL_P(z_post_data);
+			break;
+		case IS_ARRAY:
+			post_data = "";
+			break;
+		}
+	}
+
+	zval *z_host_ptr;
+	char *host, *response;
+	z_host_ptr = zend_read_property(webdav_ce, getThis(), ZEND_STRL(PROPERTIES_HOST), 0 TSRMLS_CC);
+	host = Z_STRVAL_P(z_host_ptr);
+	if (post(host, uri, post_data, &response) != 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "%s", "post faild!");
+	}
+	RETURN_STRING(response, 1);
 }
 
 PHP_MINIT_FUNCTION(webdav)
