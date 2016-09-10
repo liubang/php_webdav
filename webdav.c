@@ -125,6 +125,13 @@ static int make_socket(char *host_name, unsigned int port)
 	return sock;
 }
 
+#define sdtr(s, h)		\
+	do {			\
+		free(h);	\
+		close(s);	\
+	} while(0)
+
+
 static int upload(char *host_name, char *file, char *create, char **response)
 {
 	int size;
@@ -142,9 +149,11 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	        , create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
+		sdtr(msocket, put);
 		error("Fail to send header");
 	}
 	if (send(msocket, (void *)conteudo, size, 0) < 0) {
+		sdtr(msocket, put);
 		error("Fail to send content");
 	}
 
@@ -152,11 +161,11 @@ static int upload(char *host_name, char *file, char *create, char **response)
 		buf[recebidos] = '\0';
 		*response = buf;
 	} else {
+		sdtr(msocket, put);
 		error("put file faild");
 	}
 
-	close(msocket);
-	free(put);
+	sdtr(msocket, put);
 	return 0;
 }
 
@@ -179,11 +188,11 @@ static int delete(char *host_name, char *remote_file, char **response)
 		buf[recebidos] = '\0';
 		*response = buf;
 	} else {
+		sdtr(sock, delete);
 		error("delete file faild");
 	}
 
-	close(sock);
-	free(delete);
+	sdtr(sock, delete);
 	return 0;
 }
 
@@ -194,13 +203,14 @@ static int post(char *host_name, char *path, char *post_data, char **resp)
 	char response[BUF_SIZE];
 	char *post = malloc(BUF_SIZE);
 	snprintf(post, MAXSUB,
-			 "POST %s HTTP/1.0\r\n"
-			 "Host: %s\r\n"
-			 "Content-type: application/x-www-form-urlencoded\r\n"
-			 "Content-length: %d\r\n\r\n"
-			 "%s", path, host_name, strlen(post_data), post_data);
+	         "POST %s HTTP/1.0\r\n"
+	         "Host: %s\r\n"
+	         "Content-type: application/x-www-form-urlencoded\r\n"
+	         "Content-length: %d\r\n\r\n"
+	         "%s", path, host_name, strlen(post_data), post_data);
 
 	if (send(sock, post, strlen(post), 0) < 0) {
+		sdtr(sock, post);
 		error("Fail to make post request");
 	}
 	char c = '0';
@@ -224,8 +234,7 @@ static int post(char *host_name, char *path, char *post_data, char **resp)
 		response[resp_size] = '\0';
 	}
 	*resp = response;
-	free(post);
-	close(sock);
+	sdtr(sock, post);
 	return 0;
 }
 
@@ -243,6 +252,7 @@ static int get(char *host_name, char *remote_file, char *target)
 	        , remote_file, host_name);
 
 	if (send(msocket,get,strlen(get),0) < 0) {
+		sdtr(msocket, get);
 		error("Fail to send header");
 	}
 
@@ -264,11 +274,11 @@ static int get(char *host_name, char *remote_file, char *target)
 	}
 	while((resp_size = read(msocket,response, BUF_SIZE)) != 0) {
 		if (write_file(target, response, resp_size) == -1) {
+			sdtr(msocket, get);
 			error("write target file error!");
 		}
 	}
-	free(get);
-	close(msocket);
+	sdtr(msocket, get);
 	return 0;
 }
 
@@ -374,11 +384,11 @@ PHP_METHOD(webdav, post)
 	}
 	if (NULL != z_post_data) {
 		switch (Z_TYPE_P(z_post_data)) {
-			case IS_STRING:
-				post_data =	Z_STRVAL_P(z_post_data);
-				break;
-			case IS_ARRAY:
-			{
+		case IS_STRING:
+			post_data =	Z_STRVAL_P(z_post_data);
+			break;
+		case IS_ARRAY:
+			do {
 				zval            **current;
 				HashTable        *postfields;
 				postfields = HASH_OF(z_post_data);
@@ -413,7 +423,7 @@ PHP_METHOD(webdav, post)
 				post_data = postval;
 				post_data[post_data_size] = '\0';
 				break;
-			}
+			} while(0);
 		}
 	}
 
