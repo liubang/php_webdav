@@ -129,7 +129,7 @@ static int make_socket(char *host_name, unsigned int port)
 	do {			\
 		free(h);	\
 		close(s);	\
-	} while(0)		
+	} while(0)
 
 
 static int upload(char *host_name, char *file, char *create, char **response)
@@ -203,11 +203,11 @@ static int post(char *host_name, char *path, char *post_data, char **resp)
 	char response[BUF_SIZE];
 	char *post = malloc(BUF_SIZE);
 	snprintf(post, MAXSUB,
-			 "POST %s HTTP/1.0\r\n"
-			 "Host: %s\r\n"
-			 "Content-type: application/x-www-form-urlencoded\r\n"
-			 "Content-length: %d\r\n\r\n"
-			 "%s", path, host_name, strlen(post_data), post_data);
+	         "POST %s HTTP/1.0\r\n"
+	         "Host: %s\r\n"
+	         "Content-type: application/x-www-form-urlencoded\r\n"
+	         "Content-length: %d\r\n\r\n"
+	         "%s", path, host_name, strlen(post_data), post_data);
 
 	if (send(sock, post, strlen(post), 0) < 0) {
 		sdtr(sock, post);
@@ -384,11 +384,11 @@ PHP_METHOD(webdav, post)
 	}
 	if (NULL != z_post_data) {
 		switch (Z_TYPE_P(z_post_data)) {
-			case IS_STRING:
-				post_data =	Z_STRVAL_P(z_post_data);
-				break;
-			case IS_ARRAY:
-			{
+		case IS_STRING:
+			post_data =	Z_STRVAL_P(z_post_data);
+			break;
+		case IS_ARRAY:
+			do {
 				zval            **current;
 				HashTable        *postfields;
 				postfields = HASH_OF(z_post_data);
@@ -423,7 +423,7 @@ PHP_METHOD(webdav, post)
 				post_data = postval;
 				post_data[post_data_size] = '\0';
 				break;
-			}
+			} while(0);
 		}
 	}
 
