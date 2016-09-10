@@ -132,12 +132,12 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	msocket = make_socket(host_name, SOCK_PORT);
 	char *put = malloc(BUF_SIZE);
 
-	sprintf(put,								\
-			"PUT %s HTTP/1.1\r\n"				\
-			"Content-Length: %d\r\n"			\
-			"Host: %s\r\n"						\
-			"Connection: close\r\n\r\n"			\
-			, create, size, host_name);
+	sprintf(put,					\
+	        "PUT %s HTTP/1.1\r\n"			\
+	        "Content-Length: %d\r\n"		\
+	        "Host: %s\r\n"				\
+	        "Connection: close\r\n\r\n"		\
+	        , create, size, host_name);
 
 	if (send(msocket,put,strlen(put),0) < 0) {
 		error("Fail to send header");
@@ -163,11 +163,11 @@ static int delete(char *host_name, char *remote_file, char **response)
 	int sock = make_socket(host_name, SOCK_PORT);
 	char buf[BUF_SIZE];
 	char *delete = malloc(BUF_SIZE);
-	sprintf(delete,								\
-			"DELETE %s HTTP/1.1\r\n"			\
-			"Host: %s\r\n"						\
-			"Connection: close\r\n\r\n"			\
-			, remote_file, host_name);
+	sprintf(delete,						\
+	        "DELETE %s HTTP/1.1\r\n"			\
+	        "Host: %s\r\n"					\
+	        "Connection: close\r\n\r\n"			\
+	        , remote_file, host_name);
 	if (send(sock, delete, strlen(delete),0) < 0) {
 		error("Fail to send header");
 	}
@@ -192,12 +192,12 @@ static int get(char *host_name, char *remote_file, char *target)
 	msocket = make_socket(host_name, SOCK_PORT);
 	char *get = malloc(BUF_SIZE);
 	unsigned char response[BUF_SIZE];
-	sprintf(get,									\
-			"GET %s HTTP/1.1\r\n" 					\
-			"Host: %s\r\n" 							\
-			"Accept-Encoding: gzip, deflate\r\n" 	\
-			"Connection: close\r\n\r\n"				\
-			, remote_file, host_name);
+	sprintf(get,					\
+	        "GET %s HTTP/1.1\r\n" 			\
+	        "Host: %s\r\n" 				\
+	        "Accept-Encoding: gzip, deflate\r\n" 	\
+	        "Connection: close\r\n\r\n"		\
+	        , remote_file, host_name);
 
 	if (send(msocket,get,strlen(get),0) < 0) {
 		error("Fail to send header");
@@ -245,7 +245,9 @@ const zend_function_entry webdav_methods[] = {
 	PHP_ME(webdav, upload, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(webdav, get, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(webdav, delete, NULL, ZEND_ACC_PUBLIC)
-	{NULL, NULL, NULL}
+	{
+		NULL, NULL, NULL
+	}
 };
 
 PHP_METHOD(webdav, upload)
@@ -347,6 +349,8 @@ PHP_MINFO_FUNCTION(webdav)
 {
 	php_info_print_table_start();
 	php_info_print_table_header(2, "webdav support", "enabled");
+	php_info_print_table_row(2, "Version", PHP_WEBDAV_VERSION);
+	php_info_print_table_row(2, "Author", PHP_WEBDAV_AUTHOR);
 	php_info_print_table_end();
 }
 
@@ -357,8 +361,8 @@ zend_module_entry webdav_module_entry = {
 	NULL,
 	PHP_MINIT(webdav),
 	PHP_MSHUTDOWN(webdav),
-	PHP_RINIT(webdav),		
-	PHP_RSHUTDOWN(webdav),	
+	PHP_RINIT(webdav),
+	PHP_RSHUTDOWN(webdav),
 	PHP_MINFO(webdav),
 	PHP_WEBDAV_VERSION,
 	STANDARD_MODULE_PROPERTIES

@@ -37,6 +37,5 @@ tests/*/*.exp
 tests/*/*.log
 tests/*/*.sh
 
-.settings
 
-.cproject
+*.jpg

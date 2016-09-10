@@ -24,10 +24,10 @@ echo 'extension=webdav.so' >> {your_php_ini_path}/php.ini
 
 ```php
 <?php
-$web = new Webdav("webdav.iliubang.cn");
-var_dump($web);
+$webdav = new Webdav("webdav.iliubang.cn");
+var_dump($webdav);
 //本地文件，目标路径
-$res = $web->upload("1.jpg", "/test/1.jpg",);
+$res = $webdav->upload("1.jpg", "/test/1.jpg",);
 var_dump($res);
 //远程文件，存放的本地路径
 $res = $webdav->get("/test/4.jpg", "/home/liubang/workspace/c/php_webdav/4.jpg");
