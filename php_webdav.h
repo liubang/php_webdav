@@ -26,7 +26,7 @@ extern zend_module_entry webdav_module_entry;
 #define PHP_WEBDAV_AUTHOR				"liubang <it.liubang@gmail.com>"
 #define PROPERTIES_HOST					"_host"
 
-#define BUF_SIZE 	20480
+#define BUF_SIZE 	204800
 #define SOCK_PORT	80
 
 typedef int sockopt_t;

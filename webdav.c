@@ -34,7 +34,7 @@
 #include <getopt.h>
 #include "php_webdav.h"
 
-#define MAXSUB  200
+#define MAXSUB  204800
 
 zend_class_entry *webdav_ce;
 
@@ -160,6 +160,7 @@ static int upload(char *host_name, char *file, char *create, char **response)
 	if ((recebidos = recv(msocket, buf, sizeof(buf),0)) > 0) {
 		buf[recebidos] = '\0';
 		*response = buf;
+		printf("%s", buf);
 	} else {
 		sdtr(msocket, put);
 		error("put file faild");
